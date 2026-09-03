@@ -15,8 +15,13 @@ export default function Storefront() {
   const [orderDone, setOrderDone] = useState(null);
 
   useEffect(() => {
-    api.get("/store/products").then((r) => setProducts(r.data)).catch(() => {});
-    api.get("/store/banner").then((r) => setBanner(r.data && r.data.id ? r.data : null)).catch(() => {});
+    const refresh = () => {
+      api.get("/store/products").then((r) => setProducts(r.data)).catch(() => {});
+      api.get("/store/banner").then((r) => setBanner(r.data && r.data.id ? r.data : null)).catch(() => {});
+    };
+    refresh();
+    const t = setInterval(refresh, 15000); // live sync with the admin vault
+    return () => clearInterval(t);
   }, []);
 
   const placeOrder = async (e) => {
@@ -101,8 +106,13 @@ export default function Storefront() {
                   <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{p.description}</p>
                   <div className="mt-auto pt-3 flex items-center justify-between">
                     <span className="font-serif text-xl font-bold text-gold" data-testid={`store-price-${p.id}`}>{inr(p.price)}</span>
-                    <button onClick={() => setCheckout(p)} data-testid={`buy-now-${p.id}`}
-                      className="btn-gold rounded-full px-5 py-2 text-xs">Acquire</button>
+                    <div className="flex flex-col items-end gap-1">
+                      {p.stock != null && p.stock > 0 && p.stock <= 5 && (
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400" data-testid={`low-stock-${p.id}`}>Only {p.stock} left</span>
+                      )}
+                      <button onClick={() => setCheckout(p)} data-testid={`buy-now-${p.id}`} disabled={p.stock === 0}
+                        className="btn-gold rounded-full px-5 py-2 text-xs">{p.stock === 0 ? "Sold Out" : "Acquire"}</button>
+                    </div>
                   </div>
                 </div>
               </div>

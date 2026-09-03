@@ -5,7 +5,7 @@ import { Sparkles, Package, Trash2, Loader2, Globe, FileEdit, Upload } from "luc
 
 const EMPTY = {
   title: "", description: "", category: "", price: "", wholesale_price: "",
-  seo_tags: "", selling_points: "", image_url: "", source_link: "", status: "draft",
+  seo_tags: "", selling_points: "", image_url: "", source_link: "", status: "draft", stock: "",
 };
 
 export default function Products() {
@@ -63,6 +63,7 @@ export default function Products() {
         image_url: "",
         source_link: aiInput.startsWith("http") ? aiInput : "",
         status: "draft",
+        stock: "",
       });
       setEditId(null);
       toast.success("AI listing crafted — review & publish below");
@@ -85,6 +86,7 @@ export default function Products() {
       ...form,
       price: parseFloat(form.price) || 0,
       wholesale_price: parseFloat(form.wholesale_price) || 0,
+      stock: form.stock === "" || form.stock === null ? null : parseInt(form.stock, 10),
       seo_tags: form.seo_tags.split(",").map((t) => t.trim()).filter(Boolean),
       selling_points: form.selling_points.split("\n").map((t) => t.trim()).filter(Boolean),
     };
@@ -115,6 +117,7 @@ export default function Products() {
       seo_tags: (p.seo_tags || []).join(", "),
       selling_points: (p.selling_points || []).join("\n"),
       image_url: p.image_url || "", source_link: p.source_link || "", status: p.status,
+      stock: p.stock ?? "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -125,7 +128,7 @@ export default function Products() {
         title: p.title, description: p.description, category: p.category,
         price: p.price, wholesale_price: p.wholesale_price, seo_tags: p.seo_tags,
         selling_points: p.selling_points, image_url: p.image_url, source_link: p.source_link,
-        status: p.status === "published" ? "draft" : "published",
+        status: p.status === "published" ? "draft" : "published", stock: p.stock ?? null,
       });
       toast.success(p.status === "published" ? "Moved to drafts" : "Live on storefront");
       load();
@@ -217,6 +220,12 @@ export default function Products() {
               className="input-luxe w-full rounded-lg px-4 py-3 text-sm mt-2" />
           </div>
           <div>
+            <label className="text-xs uppercase tracking-widest text-amber-400/80 font-mono">Stock Count</label>
+            <input data-testid="product-stock-input" type="number" min="0" value={form.stock} onChange={(e) => set("stock", e.target.value)}
+              placeholder="blank = untracked"
+              className="input-luxe w-full rounded-lg px-4 py-3 text-sm mt-2" />
+          </div>
+          <div>
             <label className="text-xs uppercase tracking-widest text-amber-400/80 font-mono">SEO Tags (comma separated)</label>
             <input data-testid="product-tags-input" value={form.seo_tags} onChange={(e) => set("seo_tags", e.target.value)}
               className="input-luxe w-full rounded-lg px-4 py-3 text-sm mt-2" />
@@ -232,6 +241,7 @@ export default function Products() {
             className="input-luxe rounded-lg px-4 py-3 text-sm">
             <option value="draft">Draft</option>
             <option value="published">Published (live)</option>
+            <option value="archived">Archived</option>
           </select>
           <button type="submit" disabled={saving} data-testid="product-save-btn" className="btn-gold rounded-lg px-8 py-3 text-sm">
             {saving ? "Saving..." : editId ? "Update Product" : "Save Product"}
@@ -261,7 +271,9 @@ export default function Products() {
                     <h3 className="text-sm font-semibold text-slate-100 leading-snug">{p.title}</h3>
                     <span data-testid={`product-status-badge-${p.id}`}
                       className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase border ${
-                        p.status === "published" ? "text-green-400 border-green-400/30 bg-green-400/10" : "text-slate-400 border-slate-600 bg-slate-800/50"}`}>
+                        p.status === "published" ? "text-green-400 border-green-400/30 bg-green-400/10"
+                        : p.status === "archived" ? "text-slate-500 border-slate-700 bg-slate-900/60"
+                        : "text-slate-400 border-slate-600 bg-slate-800/50"}`}>
                       {p.status}
                     </span>
                   </div>
@@ -270,6 +282,10 @@ export default function Products() {
                     <div>
                       <div className="text-gold font-serif font-bold">{inr(p.price)}</div>
                       <div className="text-[10px] text-slate-500 font-mono">cost {inr(p.wholesale_price)}</div>
+                      <div data-testid={`product-stock-${p.id}`}
+                        className={`text-[10px] font-mono ${p.stock === 0 ? "text-red-400" : p.stock != null && p.stock <= 5 ? "text-amber-400" : "text-slate-500"}`}>
+                        {p.stock == null ? "stock untracked" : p.stock === 0 ? "out of stock" : `stock: ${p.stock}`}
+                      </div>
                     </div>
                     <div className="flex gap-1.5">
                       <button onClick={() => editProduct(p)} data-testid={`product-edit-${p.id}`} title="Edit"

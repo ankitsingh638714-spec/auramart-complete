@@ -307,6 +307,10 @@ class ProductIn(BaseModel):
     image_url: str = ""
     source_link: str = ""
     status: str = "draft"
+    stock: Optional[int] = None
+
+
+PRODUCT_STATUSES = {"draft", "published", "archived"}
 
 
 def clean(doc: dict) -> dict:
@@ -321,6 +325,8 @@ async def list_products(user=Depends(get_current_user)):
 
 @api_router.post("/admin/products")
 async def create_product(body: ProductIn, user=Depends(get_current_user)):
+    if body.status not in PRODUCT_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid status")
     doc = body.model_dump()
     doc["id"] = str(uuid.uuid4())
     doc["created_at"] = now_iso()
@@ -330,6 +336,8 @@ async def create_product(body: ProductIn, user=Depends(get_current_user)):
 
 @api_router.put("/admin/products/{pid}")
 async def update_product(pid: str, body: ProductIn, user=Depends(get_current_user)):
+    if body.status not in PRODUCT_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid status")
     res = await db.products.update_one({"id": pid}, {"$set": body.model_dump()})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -414,6 +422,13 @@ async def create_order(body: OrderIn):
         p = await db.products.find_one({"id": it.product_id}, {"_id": 0})
         if not p:
             raise HTTPException(status_code=404, detail="Product not found")
+        if p.get("status") != "published":
+            raise HTTPException(status_code=400, detail=f"'{p['title']}' is not available for purchase")
+        stock = p.get("stock")
+        if stock is not None and stock < it.qty:
+            raise HTTPException(status_code=400, detail=f"Insufficient stock for '{p['title']}'")
+        if stock is not None:
+            await db.products.update_one({"id": p["id"]}, {"$inc": {"stock": -it.qty}})
         items.append({"product_id": p["id"], "title": p["title"], "price": p["price"],
                       "qty": it.qty, "image_url": p.get("image_url", "")})
         total += p["price"] * it.qty
@@ -504,6 +519,7 @@ async def admin_stats(user=Depends(get_current_user)):
         by_status[o["status"]] = by_status.get(o["status"], 0) + 1
     products_live = await db.products.count_documents({"status": "published"})
     products_total = await db.products.count_documents({})
+    low_stock = await db.products.count_documents({"stock": {"$gte": 0, "$lte": 5}})
     recent = sorted(orders, key=lambda o: o["created_at"], reverse=True)[:5]
     return {
         "revenue": round(revenue, 2),
@@ -511,6 +527,7 @@ async def admin_stats(user=Depends(get_current_user)):
         "by_status": by_status,
         "products_live": products_live,
         "products_total": products_total,
+        "low_stock": low_stock,
         "recent_orders": recent,
     }
 
@@ -772,6 +789,7 @@ async def startup():
     await db.password_reset_requests.create_index("created_at", expireAfterSeconds=900)
     await seed_admin()
     await seed_catalog()
+    await db.products.update_many({"stock": {"$exists": False}}, {"$set": {"stock": 25}})
 
 
 app.include_router(api_router)

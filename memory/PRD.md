@@ -31,6 +31,13 @@ Secure admin-only access; AI listing generation; AI banner generation + video ho
 - Media Studio has **Upload Banner** (`/api/admin/media/upload` → banner record) and AI-generated banners/posters now persist to object storage (local-disk fallback if storage is unavailable).
 - Verified via curl: upload → public serve byte-identical over external URL; unauthenticated upload 401; non-image upload 400. UI verified via Playwright screenshot.
 
+## Implemented (2026-09-03, iteration 3)
+- **Inventory control**: `stock` field on products (null = untracked), stock input in the product form, stock badges on Vault cards (red out-of-stock / amber ≤5), status validation (draft/published/archived), archive status support.
+- **Order-time stock enforcement**: checkout rejects draft/archived/unpublished products and insufficient stock (400); successful orders decrement stock atomically ($inc).
+- **Live storefront sync**: storefront polls `/api/store/products` + `/api/store/banner` every 15s — vault edits, deletes, publishes and hero changes propagate automatically; sold-out products show disabled "Sold Out" CTA, low stock shows "Only N left".
+- **Dashboard low-stock chip** in stats (`low_stock` count).
+- Verified via API script over https: order → stock 25→23, invalid status 400, draft order blocked, out-of-stock blocked, cleanup restored state. Frontend compiles clean.
+
 ## Backlog
 - P0: none.
 - P1: real video provider integration (Veo/Runway/Sora) for 10s clips; real Shiprocket/Delhivery API keys wired into `/fulfill`; order tracking webhook.

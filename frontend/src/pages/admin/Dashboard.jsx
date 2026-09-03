@@ -55,6 +55,10 @@ export default function Dashboard() {
             {s}: {n}
           </div>
         ))}
+        <div data-testid="low-stock-chip"
+          className="px-4 py-1.5 rounded-full border text-xs font-mono uppercase tracking-wider text-amber-400 bg-amber-400/10 border-amber-400/30">
+          low stock: {stats.low_stock ?? 0}
+        </div>
       </div>
 
       <div className="glass-card rounded-xl overflow-hidden">
