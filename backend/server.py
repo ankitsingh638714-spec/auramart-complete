@@ -16,7 +16,8 @@ from typing import Optional, List
 import bcrypt
 import jwt
 import httpx
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, BackgroundTasks
+import requests
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, BackgroundTasks, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -40,6 +41,43 @@ JWT_ALGORITHM = "HS256"
 LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 ORDER_STATUSES = ["pending", "confirmed", "dispatched", "delivered", "cancelled"]
+
+
+# ---------------- Object Storage (Emergent objstore) ----------------
+STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
+STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
+APP_NAME = "auramart-luxe"
+storage_key = None
+
+
+def init_storage(force: bool = False):
+    global storage_key
+    if storage_key and not force:
+        return storage_key
+    resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": LLM_KEY}, timeout=30)
+    resp.raise_for_status()
+    storage_key = resp.json()["storage_key"]
+    return storage_key
+
+
+def put_object(path: str, data: bytes, content_type: str) -> dict:
+    resp = requests.put(f"{STORAGE_URL}/objects/{path}",
+                        headers={"X-Storage-Key": init_storage(), "Content-Type": content_type},
+                        data=data, timeout=120)
+    if resp.status_code == 404:  # stale session key — remint once and retry
+        resp = requests.put(f"{STORAGE_URL}/objects/{path}",
+                            headers={"X-Storage-Key": init_storage(force=True), "Content-Type": content_type},
+                            data=data, timeout=120)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_object(path: str):
+    resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": init_storage()}, timeout=60)
+    if resp.status_code == 404:
+        resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": init_storage(force=True)}, timeout=60)
+    resp.raise_for_status()
+    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
 
 
 def now_iso() -> str:
@@ -493,10 +531,23 @@ async def generate_banner_image(prompt: str) -> str:
     images = await image_gen.generate_images(prompt=full_prompt, model="gpt-image-1", number_of_images=1)
     if not images:
         raise HTTPException(status_code=500, detail="No image was generated")
-    fname = f"banner_{uuid.uuid4().hex}.png"
-    with open(UPLOAD_DIR / fname, "wb") as f:
-        f.write(images[0])
-    return f"/api/uploads/{fname}"
+    data = images[0]
+    path = f"{APP_NAME}/banners/ai/{uuid.uuid4().hex}.png"
+    try:
+        result = put_object(path, data, "image/png")
+        await db.files.insert_one({
+            "id": str(uuid.uuid4()), "storage_path": result["path"],
+            "url": f"/api/files/{result['path']}", "original_filename": "ai-generated-banner.png",
+            "content_type": "image/png", "size": result["size"], "is_deleted": False,
+            "uploaded_by": "ai-generator", "created_at": now_iso(),
+        })
+        return f"/api/files/{result['path']}"
+    except Exception as e:
+        logger.warning(f"Object storage unavailable, saving banner locally: {e}")
+        fname = f"banner_{uuid.uuid4().hex}.png"
+        with open(UPLOAD_DIR / fname, "wb") as f:
+            f.write(data)
+        return f"/api/uploads/{fname}"
 
 
 @api_router.get("/admin/media")
@@ -547,6 +598,63 @@ async def delete_banner(bid: str, user=Depends(get_current_user)):
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Banner not found")
     return {"message": "deleted"}
+
+
+# ---------------- File & Media Storage ----------------
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
+
+async def store_upload(file: UploadFile, user: dict, folder: str = "uploads") -> dict:
+    ct = (file.content_type or "").split(";")[0]
+    if ct not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="Only JPG, PNG, WEBP or GIF images are allowed")
+    data = await file.read()
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=400, detail="File exceeds the 10MB limit")
+    ext = file.filename.rsplit(".", 1)[-1].lower() if file.filename and "." in file.filename else "png"
+    path = f"{APP_NAME}/{folder}/{user['id']}/{uuid.uuid4()}.{ext}"
+    try:
+        result = put_object(path, data, ct)
+    except Exception as e:
+        logger.error(f"Storage upload failed: {e}")
+        raise HTTPException(status_code=502, detail="Media storage upload failed")
+    doc = {
+        "id": str(uuid.uuid4()), "storage_path": result["path"],
+        "url": f"/api/files/{result['path']}", "original_filename": file.filename,
+        "content_type": ct, "size": result["size"], "is_deleted": False,
+        "uploaded_by": user["id"], "created_at": now_iso(),
+    }
+    await db.files.insert_one(doc)
+    return clean(doc)
+
+
+@api_router.post("/admin/upload")
+async def upload_file(file: UploadFile = File(...), user=Depends(get_current_user)):
+    return await store_upload(file, user)
+
+
+@api_router.post("/admin/media/upload")
+async def upload_banner(file: UploadFile = File(...), user=Depends(get_current_user)):
+    fdoc = await store_upload(file, user, folder="banners")
+    doc = {"id": str(uuid.uuid4()), "type": "image", "prompt": fdoc["original_filename"] or "Uploaded banner",
+           "image_url": fdoc["url"], "video_url": None, "active": False, "status": "ready",
+           "created_at": now_iso()}
+    await db.banners.insert_one(doc)
+    return clean(doc)
+
+
+@api_router.get("/files/{path:path}")
+async def serve_file(path: str):
+    record = await db.files.find_one({"storage_path": path, "is_deleted": False}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="File not found")
+    try:
+        data, ct = get_object(path)
+    except Exception:
+        raise HTTPException(status_code=404, detail="File not found in storage")
+    return Response(content=data, media_type=record.get("content_type", ct))
 
 
 # ---------------- Public storefront ----------------
@@ -651,6 +759,11 @@ async def seed_catalog():
 
 @app.on_event("startup")
 async def startup():
+    try:
+        init_storage()
+        logger.info("Object storage initialized")
+    except Exception as e:
+        logger.error(f"Object storage init failed: {e}")
     await db.users.create_index("email", unique=True)
     await db.login_attempts.create_index("identifier")
     await db.login_attempts.create_index("email")

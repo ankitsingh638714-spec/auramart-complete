@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, formatApiError, imgUrl } from "../../lib/api";
 import { toast } from "sonner";
-import { Image as ImageIcon, Video, Sparkles, Loader2, Trash2, CheckCircle2, Film } from "lucide-react";
+import { Image as ImageIcon, Video, Sparkles, Loader2, Trash2, CheckCircle2, Film, Upload } from "lucide-react";
 
 export default function Media() {
   const [banners, setBanners] = useState([]);
@@ -26,6 +26,24 @@ export default function Media() {
       setPrompt("");
       load();
       if (kind === "video" && data.note) toast.info(data.note);
+    } catch (err) {
+      toast.error(formatApiError(err));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const uploadBanner = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBusy("upload");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      await api.post("/admin/media/upload", fd);
+      toast.success("Banner uploaded to media storage");
+      load();
     } catch (err) {
       toast.error(formatApiError(err));
     } finally {
@@ -79,6 +97,12 @@ export default function Media() {
             {busy === "video" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
             {busy === "video" ? "Rendering poster..." : "Generate Cinematic Video (Hook)"}
           </button>
+          <label data-testid="upload-banner-btn"
+            className={`btn-ghost-gold rounded-lg px-6 py-3 text-sm flex items-center gap-2 cursor-pointer ${busy ? "opacity-50 pointer-events-none" : ""}`}>
+            {busy === "upload" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            {busy === "upload" ? "Uploading..." : "Upload Banner"}
+            <input type="file" accept="image/*" className="hidden" onChange={uploadBanner} disabled={!!busy} />
+          </label>
         </div>
         <p className="text-[11px] text-slate-600 font-mono">Video generation is an integration hook — connect Veo / Runway / Sora to render full 10s clips. Poster frames generate instantly.</p>
       </div>

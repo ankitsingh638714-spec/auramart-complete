@@ -25,6 +25,12 @@ Secure admin-only access; AI listing generation; AI banner generation + video ho
 - Dashboard: revenue/orders/products/pending stats, status chips, recent orders.
 - Testing: iteration_1 — backend 41/42, frontend 26/26 assertions; all reported issues fixed (lockout keyed on email, datetime TTL docs, delete confirmations, heading copy, hero scrim, media skeleton).
 
+## Implemented (2026-09-03, iteration 2)
+- **File & media storage (Emergent Object Storage)**: `/api/admin/upload` (admin-only, image-only JPG/PNG/WEBP/GIF, 10MB cap), public serving at `/api/files/{path}` gated on DB records with soft-delete flag, `storage_key` minted at startup with stale-key retry. Paths prefixed `auramart-luxe/...`.
+- Product form now has an **Upload** button (testid `product-image-upload`) wiring straight into storage.
+- Media Studio has **Upload Banner** (`/api/admin/media/upload` → banner record) and AI-generated banners/posters now persist to object storage (local-disk fallback if storage is unavailable).
+- Verified via curl: upload → public serve byte-identical over external URL; unauthenticated upload 401; non-image upload 400. UI verified via Playwright screenshot.
+
 ## Backlog
 - P0: none.
 - P1: real video provider integration (Veo/Runway/Sora) for 10s clips; real Shiprocket/Delhivery API keys wired into `/fulfill`; order tracking webhook.

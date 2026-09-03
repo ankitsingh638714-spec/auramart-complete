@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, formatApiError, imgUrl, inr } from "../../lib/api";
 import { toast } from "sonner";
-import { Sparkles, Package, Trash2, Loader2, Globe, FileEdit } from "lucide-react";
+import { Sparkles, Package, Trash2, Loader2, Globe, FileEdit, Upload } from "lucide-react";
 
 const EMPTY = {
   title: "", description: "", category: "", price: "", wholesale_price: "",
@@ -14,6 +14,7 @@ export default function Products() {
   const [aiWholesale, setAiWholesale] = useState("");
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [editId, setEditId] = useState(null);
 
@@ -21,6 +22,24 @@ export default function Products() {
   useEffect(() => { load(); }, []);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const uploadImage = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { data } = await api.post("/admin/upload", fd);
+      set("image_url", data.url);
+      toast.success("Image uploaded to media storage");
+    } catch (err) {
+      toast.error(formatApiError(err));
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const generate = async () => {
     if (!aiInput.trim()) {
@@ -177,8 +196,15 @@ export default function Products() {
           </div>
           <div>
             <label className="text-xs uppercase tracking-widest text-amber-400/80 font-mono">Image URL</label>
-            <input data-testid="product-image-input" value={form.image_url} onChange={(e) => set("image_url", e.target.value)}
-              className="input-luxe w-full rounded-lg px-4 py-3 text-sm mt-2" placeholder="https://..." />
+            <div className="flex gap-2 mt-2">
+              <input data-testid="product-image-input" value={form.image_url} onChange={(e) => set("image_url", e.target.value)}
+                className="input-luxe flex-1 rounded-lg px-4 py-3 text-sm" placeholder="https://... or upload" />
+              <label data-testid="product-image-upload"
+                className={`btn-ghost-gold rounded-lg px-4 py-3 text-xs flex items-center gap-2 cursor-pointer shrink-0 ${uploading ? "opacity-60 pointer-events-none" : ""}`}>
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Upload
+                <input type="file" accept="image/*" className="hidden" onChange={uploadImage} disabled={uploading} />
+              </label>
+            </div>
           </div>
           <div>
             <label className="text-xs uppercase tracking-widest text-amber-400/80 font-mono">Retail Price ₹</label>
