@@ -1,0 +1,88 @@
+{
+  "summary": "Full first-round e2e test of AuraMart Luxe admin dashboard + storefront. Backend: 42 pytest cases across auth, route protection, password reset, products CRUD, orders (create/status/fulfillment), stats, storefront, media and real AI endpoints (gpt-5.4-mini product gen ~10s, gpt-image-1 banner gen ~40s) -> 41 passed. Frontend: 4 Playwright runs covering storefront checkout, admin login (valid/invalid), protected-route redirect, dashboard stats, orders table + status persistence + details modal + Dispatch Shipment (AWB), AI product generation -> save -> publish -> storefront -> unpublish/edit/delete, Media Studio AI banner + video-hook generation, Set-as-Hero -> storefront hero update, forgot-password page, logout. All frontend flows passed. One real backend security defect found: brute-force lockout is keyed on request.client.host which is the ingress pod IP and rotates, so the 5-attempt lockout never triggers through the public URL (works on localhost:8001).",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/auth/login",
+        "issue": "Brute-force lockout bypassable in production. identifier = f\"{request.client.host}:{email}\" — behind the k8s/Cloudflare ingress request.client.host is the proxy pod IP which rotates between replicas (observed 10.208.134.66 and 10.208.134.70 within 7 requests), so login_attempts never accumulate to 5 and no 429 is ever returned via the public URL. Repro: 7 wrong-password POSTs to https://<public>/api/auth/login -> all 401. Same test against http://localhost:8001 correctly returns 429 on the 6th. Fix: key the counter on the normalized email (and optionally X-Forwarded-For's first hop) instead of request.client.host.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "startup / db.password_reset_requests",
+        "issue": "TTL index create_index(\"created_at\", expireAfterSeconds=900) never expires anything because created_at is stored as an ISO string (now_iso()) — MongoDB TTL only works on BSON Date. The collection will grow unbounded. Store a real datetime for created_at (throttle comparisons can keep using a separate string field or be switched to datetimes)."
+      },
+      {
+        "endpoint": "/api/admin/orders",
+        "issue": "No DELETE endpoint for orders, so QA/demo orders cannot be removed via API (had to clean up directly in MongoDB). Also no pagination/filtering on the list (hard-capped at 1000)."
+      },
+      {
+        "endpoint": "PUT /api/admin/products/{pid}",
+        "issue": "Full-document replace semantics (ProductIn defaults overwrite unspecified fields). The publish toggle works only because the UI resends the whole object; a PATCH-style partial update would be safer."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Products.jsx product-delete-<id>",
+        "issue": "Product delete executes immediately with no confirmation dialog — accidental destructive action for a live catalog.",
+        "selector": "[data-testid^='product-delete-']",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "ForgotPassword.jsx",
+        "issue": "Page heading reads 'Reset Password' on the /forgot-password route, which duplicates the actual /reset-password page title and is confusing. Should read 'Forgot Password'.",
+        "selector": "h1",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Storefront hero",
+        "issues": [
+          "AI-generated banner subject sits center/left and collides with the H1 headline block; the bottom-up gradient does not darken the mid-band, so on some generated images the headline overlaps the product. Consider a left-side linear gradient scrim in addition to the vertical one."
+        ]
+      },
+      {
+        "screen": "Admin Media Studio",
+        "issues": [
+          "During generation the banner gallery does not show a skeleton/placeholder card, so a 40-90s image call gives no in-list feedback (only the button spinner)."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_auth_playbook.py",
+    "/app/backend/tests/cleanup_test_data.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "HIGH: Key login brute-force lockout on the normalized email (and/or X-Forwarded-For) instead of request.client.host — lockout is currently ineffective behind the ingress.",
+    "Store password_reset_requests.created_at as a datetime so the 900s TTL index actually expires documents.",
+    "Add a confirmation step before product delete (and ideally before banner delete).",
+    "Rename the /forgot-password heading to 'Forgot Password'.",
+    "Optional: add DELETE /api/admin/orders/{id} plus pagination on orders/products lists."
+  ],
+  "critical_code_review_comments": [
+    "server.py login(): request.client.host is the reverse-proxy IP in this deployment; any IP-based rate limiting/lockout must not rely on it.",
+    "TTL index on a string date field is a silent no-op — password_reset_requests will grow forever.",
+    "server.py is 667 lines and already mixes auth, products, orders, media and seeding; split into routers/modules before it crosses the 700-line threshold.",
+    "Verified good: bcrypt $2b$ hashes, unique index on users.email, unique index on password_reset_tokens.token_hash, only sha256 token_hash stored (never the raw token), httpOnly+Secure+SameSite=None cookies, generic identical forgot-password responses for registered/unregistered emails, token_version invalidation on reset, login_attempts cleared after reset, all _id fields stripped from responses, CORS allow_credentials with explicit origins (verified on the app port; the public-edge preflight is answered by the ingress with ACAO:* which is expected)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_auth_playbook.py",
+    "/app/backend/tests/cleanup_test_data.py"
+  ],
+  "success_rate": {"backend": "97.6% (41/42)", "frontend": "100% of executed flows (26/26 assertions)"},
+  "seed_data_creation": "Created and then removed TEST_ prefixed products, orders (TEST_Customer / TEST_UI Buyer) and AI banners. Ran /app/backend/tests/cleanup_test_data.py afterwards — DB restored to seed state: 3 products, 3 orders, 1 active banner.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "ankitsingh638714@gmail.com / AuraLuxe@2026! (from /app/memory/test_credentials.md) — valid, login works",
+  "context_for_next_testing_agent": "Regression suites: /app/backend/tests/backend_test.py (all API + AI) and /app/backend/tests/test_auth_playbook.py (bcrypt/index/lockout). Run cleanup_test_data.py after any run — there is no order-delete API. Known expected failure until fixed: test_brute_force_lockout_public_url (IP-keyed lockout behind ingress); test_brute_force_lockout_localhost passes. Do not run the lockout tests with the real admin email or you will lock it for 15 min on the localhost path. Frontend flows (checkout, AI product gen, media gen, fulfillment, publish toggle) were all verified working via Playwright with data-testids as documented.",
+  "rca_of_the_issue": "Lockout RCA: db.login_attempts documents are keyed by f\"{request.client.host}:{email}\". In this Kubernetes/Cloudflare setup the TCP peer seen by uvicorn is the ingress pod, and multiple ingress replicas serve consecutive requests, producing distinct identifiers for the same attacker/email pair. The count_documents({identifier}) therefore stays below 5 and the 429 branch is unreachable through the public URL. Verified by inspecting login_attempts.distinct('identifier') for a single throwaway email after 7 failed logins: two different 10.208.134.x IPs."
+}

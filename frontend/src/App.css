@@ -1,0 +1,118 @@
+.gold-text {
+    background: linear-gradient(100deg, #f3e5ab 0%, #d4af37 45%, #f8eec9 70%, #b8912a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.glass-card {
+    background: rgba(24, 24, 32, 0.72);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(212, 175, 55, 0.16);
+}
+
+.glass-card-hover {
+    transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-card-hover:hover {
+    border-color: rgba(212, 175, 55, 0.55);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(212, 175, 55, 0.12);
+}
+
+.btn-gold {
+    background: linear-gradient(100deg, #b8912a, #d4af37 50%, #e5c158);
+    color: #0b0b0e;
+    font-weight: 600;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.25);
+    transition: box-shadow 0.3s ease, filter 0.3s ease, transform 0.15s ease;
+}
+
+.btn-gold:hover:not(:disabled) {
+    filter: brightness(1.12);
+    box-shadow: 0 0 32px rgba(212, 175, 55, 0.45);
+}
+
+.btn-gold:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.btn-gold:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.btn-ghost-gold {
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    color: #e5c158;
+    transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.btn-ghost-gold:hover:not(:disabled) {
+    background-color: rgba(212, 175, 55, 0.1);
+    border-color: rgba(212, 175, 55, 0.7);
+}
+
+.input-luxe {
+    background: rgba(11, 11, 14, 0.8);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    color: #f8fafc;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.input-luxe:focus {
+    outline: none;
+    border-color: rgba(212, 175, 55, 0.7);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12);
+}
+
+.input-luxe::placeholder {
+    color: #64748b;
+}
+
+.gold-shimmer {
+    position: relative;
+    overflow: hidden;
+}
+
+.gold-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 40%, rgba(212, 175, 55, 0.18) 50%, transparent 60%);
+    animation: shimmer 3.2s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.fade-up {
+    animation: fadeUp 0.5s ease both;
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0b0b0e;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #2e2a20;
+    border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #d4af37;
+}
