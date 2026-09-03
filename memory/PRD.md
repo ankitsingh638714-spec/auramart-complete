@@ -38,6 +38,9 @@ Secure admin-only access; AI listing generation; AI banner generation + video ho
 - **Dashboard low-stock chip** in stats (`low_stock` count).
 - Verified via API script over https: order → stock 25→23, invalid status 400, draft order blocked, out-of-stock blocked, cleanup restored state. Frontend compiles clean.
 
+## History (2026-09-03, iteration 4 — REVERTED)
+- The hidden admin shortcut change (Ctrl+Shift+A / #secure-admin-portal gate, hidden Owner Login link) was fully reverted at the user's request: `git reset --hard 6fb1656` (Inventory Control commit) + `git push --force origin main`. Current stable state: visible "Owner Login" link in the storefront header, open `/admin/login` route, JWT-protected `/admin/*` backend routes.
+
 ## Backlog
 - P0: none.
 - P1: real video provider integration (Veo/Runway/Sora) for 10s clips; real Shiprocket/Delhivery API keys wired into `/fulfill`; order tracking webhook.
