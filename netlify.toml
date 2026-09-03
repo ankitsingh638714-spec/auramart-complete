@@ -4,6 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  REACT_APP_BACKEND_URL = "https://dropship-control-3.preview.emergentagent.com"
 
 [[redirects]]
   from = "/*"
