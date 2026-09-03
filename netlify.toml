@@ -1,7 +1,6 @@
 [build]
-  base = "frontend"
-  command = "yarn build"
-  publish = "build"
+  command = "yarn --cwd frontend build"
+  publish = "frontend/build"
 
 [build.environment]
   NODE_VERSION = "20"
