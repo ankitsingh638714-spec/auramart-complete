@@ -1,5 +1,5 @@
 [build]
-  command = "yarn --cwd frontend build"
+  command = "yarn --cwd frontend install --frozen-lockfile && yarn --cwd frontend build"
   publish = "frontend/build"
 
 [build.environment]
