@@ -40,6 +40,9 @@ logger = logging.getLogger(__name__)
 JWT_ALGORITHM = "HS256"
 LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+CORS_ORIGINS = [origin.strip().rstrip("/") for origin in os.environ.get("CORS_ORIGINS", "").split(",") if origin.strip()]
+if FRONTEND_URL not in CORS_ORIGINS:
+    CORS_ORIGINS.append(FRONTEND_URL)
 ORDER_STATUSES = ["pending", "confirmed", "dispatched", "delivered", "cancelled"]
 
 
@@ -798,7 +801,8 @@ app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads"
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL, "http://localhost:3000"],
+    allow_origins=list(dict.fromkeys(CORS_ORIGINS + ["http://localhost:3000"])),
+    allow_origin_regex=r"https://([a-z0-9-]+\.)*netlify\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
