@@ -41,6 +41,11 @@ Secure admin-only access; AI listing generation; AI banner generation + video ho
 ## History (2026-09-03, iteration 4 — REVERTED)
 - The hidden admin shortcut change (Ctrl+Shift+A / #secure-admin-portal gate, hidden Owner Login link) was fully reverted at the user's request: `git reset --hard 6fb1656` (Inventory Control commit) + `git push --force origin main`. Current stable state: visible "Owner Login" link in the storefront header, open `/admin/login` route, JWT-protected `/admin/*` backend routes.
 
+## Implemented (2026-09-03, iteration 5)
+- **Storefront sync fix**: demo product/order seeding disabled in `seed_catalog` (previously re-seeded 3 demo products + 3 orders whenever collections were empty — the source of "hardcoded demo products keep coming back"). Banner seed kept (hero needs a default).
+- **Default publish**: new and AI-generated products now default to `published` status so saving from the admin panel immediately shows them on the live storefront (draft/archived still selectable).
+- Netlify config (`netlify.toml`) already present from user-side commits: builds `frontend/` with craco, SPA redirects, `REACT_APP_BACKEND_URL` set at build time.
+
 ## Backlog
 - P0: none.
 - P1: real video provider integration (Veo/Runway/Sora) for 10s clips; real Shiprocket/Delhivery API keys wired into `/fulfill`; order tracking webhook.

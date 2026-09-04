@@ -34,6 +34,9 @@ dist
 
 *token.json*
 *credentials.json*
+.env
+.env.*
+!.env.example
 
 # Logs and debug files
 npm-debug.log*
@@ -60,6 +63,7 @@ chainlit.md
 
 # Deployment
 .vercel
+.netlify
 
 # Data and databases
 agenthub/agents/youtube/db

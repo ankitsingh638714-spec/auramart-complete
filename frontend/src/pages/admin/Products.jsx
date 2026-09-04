@@ -5,7 +5,7 @@ import { Sparkles, Package, Trash2, Loader2, Globe, FileEdit, Upload } from "luc
 
 const EMPTY = {
   title: "", description: "", category: "", price: "", wholesale_price: "",
-  seo_tags: "", selling_points: "", image_url: "", source_link: "", status: "draft", stock: "",
+  seo_tags: "", selling_points: "", image_url: "", source_link: "", status: "published", stock: "",
 };
 
 export default function Products() {
@@ -62,7 +62,7 @@ export default function Products() {
         selling_points: (data.selling_points || []).join("\n"),
         image_url: "",
         source_link: aiInput.startsWith("http") ? aiInput : "",
-        status: "draft",
+        status: "published",
         stock: "",
       });
       setEditId(null);
