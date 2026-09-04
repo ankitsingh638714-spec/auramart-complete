@@ -1,6 +1,7 @@
 import axios from "axios";
 
-export const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const BACKEND_URL = "https://dropship-control-3.preview.emergentagent.com";
+export const API = `${BACKEND_URL}/api`;
 
 export const api = axios.create({
   baseURL: API,
@@ -10,7 +11,7 @@ export const api = axios.create({
 export const imgUrl = (p) => {
   if (!p) return "";
   if (p.startsWith("http")) return p;
-  return `${process.env.REACT_APP_BACKEND_URL}${p}`;
+  return `${BACKEND_URL}${p}`;
 };
 
 export function formatApiError(err) {
