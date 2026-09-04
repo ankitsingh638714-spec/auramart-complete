@@ -677,7 +677,8 @@ async def serve_file(path: str):
 # ---------------- Public storefront ----------------
 
 @api_router.get("/store/products")
-async def store_products():
+async def store_products(response: Response):
+    response.headers["Cache-Control"] = "no-store"
     return [clean(p) for p in await db.products.find({"status": "published"}).sort("created_at", -1).to_list(200)]
 
 
@@ -713,7 +714,7 @@ async def seed_admin():
 
 
 async def seed_catalog():
-    if await db.products.count_documents({}) == 0:
+    if False:  # Products are managed exclusively through the admin panel.
         products = [
             {
                 "id": str(uuid.uuid4()), "title": "Aura Royal Chronograph 24K",

@@ -20,8 +20,12 @@ export default function Storefront() {
       api.get("/store/banner").then((r) => setBanner(r.data && r.data.id ? r.data : null)).catch(() => {});
     };
     refresh();
-    const t = setInterval(refresh, 15000); // live sync with the admin vault
-    return () => clearInterval(t);
+    const t = setInterval(refresh, 15000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("focus", refresh);
+    };
   }, []);
 
   const placeOrder = async (e) => {
