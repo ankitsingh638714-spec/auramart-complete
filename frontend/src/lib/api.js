@@ -1,9 +1,14 @@
 const PRODUCTS_KEY = "auramart.products";
+const PRODUCTS_STORAGE_VERSION = "empty-v1";
 const ORDERS_KEY = "auramart.orders";
 const BANNERS_KEY = "auramart.banners";
 const SESSION_KEY = "auramart.admin.session";
 const read = (key, fallback = []) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const write = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+if (localStorage.getItem(`${PRODUCTS_KEY}.version`) !== PRODUCTS_STORAGE_VERSION) {
+  write(PRODUCTS_KEY, []);
+  write(`${PRODUCTS_KEY}.version`, PRODUCTS_STORAGE_VERSION);
+}
 const id = () => `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 const response = (data) => Promise.resolve({ data });
 const failure = (detail, status = 400) => { const error = new Error(detail); error.response = { status, data: { detail } }; return Promise.reject(error); };
