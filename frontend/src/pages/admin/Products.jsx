@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, formatApiError, imgUrl, inr } from "../../lib/api";
+import { api, formatApiError, imgUrl, inr, subscribeToProducts } from "../../lib/api";
 import { toast } from "sonner";
 import { Sparkles, Package, Trash2, Loader2, Globe, FileEdit, Upload } from "lucide-react";
 
@@ -19,7 +19,10 @@ export default function Products() {
   const [editId, setEditId] = useState(null);
 
   const load = () => api.get("/admin/products").then((r) => setProducts(r.data)).catch(() => {});
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    return subscribeToProducts(load);
+  }, []);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 

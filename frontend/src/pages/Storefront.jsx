@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, formatApiError, imgUrl, inr } from "../lib/api";
+import { api, formatApiError, imgUrl, inr, subscribeToProducts } from "../lib/api";
 import { toast } from "sonner";
 import { Gem, Lock, X, Sparkles, MapPin, Phone, User, CheckCircle2 } from "lucide-react";
 
@@ -20,10 +20,10 @@ export default function Storefront() {
       api.get("/store/banner").then((r) => setBanner(r.data && r.data.id ? r.data : null)).catch(() => {});
     };
     refresh();
-    const t = setInterval(refresh, 15000);
+    const unsubscribe = subscribeToProducts(refresh);
     window.addEventListener("focus", refresh);
     return () => {
-      clearInterval(t);
+      unsubscribe();
       window.removeEventListener("focus", refresh);
     };
   }, []);

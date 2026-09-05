@@ -4,7 +4,10 @@ const ORDERS_KEY = "auramart.orders";
 const BANNERS_KEY = "auramart.banners";
 const SESSION_KEY = "auramart.admin.session";
 const read = (key, fallback = []) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
-const write = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+const write = (key, value) => {
+  localStorage.setItem(key, JSON.stringify(value));
+  if (key === PRODUCTS_KEY) window.dispatchEvent(new Event("auramart.products.changed"));
+};
 if (localStorage.getItem(`${PRODUCTS_KEY}.version`) !== PRODUCTS_STORAGE_VERSION) {
   write(PRODUCTS_KEY, []);
   write(`${PRODUCTS_KEY}.version`, PRODUCTS_STORAGE_VERSION);
@@ -14,6 +17,15 @@ const response = (data) => Promise.resolve({ data });
 const failure = (detail, status = 400) => { const error = new Error(detail); error.response = { status, data: { detail } }; return Promise.reject(error); };
 const currentUser = () => { const email = localStorage.getItem(SESSION_KEY); return email ? { id: "local-admin", email, name: "Store Owner", role: "admin" } : null; };
 const publishedProducts = () => read(PRODUCTS_KEY).filter((product) => product.status === "published");
+export const subscribeToProducts = (callback) => {
+  const refresh = () => callback();
+  window.addEventListener("auramart.products.changed", refresh);
+  window.addEventListener("storage", refresh);
+  return () => {
+    window.removeEventListener("auramart.products.changed", refresh);
+    window.removeEventListener("storage", refresh);
+  };
+};
 const fileDataUrl = (file) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
 
 const route = async (method, path, body) => {

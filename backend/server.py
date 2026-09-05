@@ -717,39 +717,6 @@ async def seed_admin():
 
 
 async def seed_catalog():
-    if False:  # Products are managed exclusively through the admin panel.
-        products = [
-            {
-                "id": str(uuid.uuid4()), "title": "Aura Royal Chronograph 24K",
-                "description": "A masterpiece of horology. The Aura Royal Chronograph pairs a 24K gold-plated bezel with precision quartz movement, resting on obsidian-black Italian leather.\n\nEvery glance at your wrist becomes a statement of quiet power and timeless taste.",
-                "category": "Horology & Timepieces", "price": 890, "wholesale_price": 240,
-                "seo_tags": ["luxury watch", "gold chronograph", "men's luxury watch", "24k gold watch", "premium timepiece", "designer watch", "aura royal", "gift for him"],
-                "selling_points": ["24K gold-plated bezel", "Precision quartz movement", "Italian leather strap", "Signature gift coffret included"],
-                "image_url": "https://images.unsplash.com/photo-1772949400107-f35fd026ab77?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjB3YXRjaCUyMGdvbGQlMjBqZXdlbHJ5JTIwZGFyayUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzg1NDc5Mzc5fDA&ixlib=rb-4.1.0&q=85",
-                "source_link": "", "status": "published", "created_at": now_iso(),
-            },
-            {
-                "id": str(uuid.uuid4()), "title": "Elixir D'Or Parfum Signature",
-                "description": "An intoxicating blend of rare oud, amber and golden saffron. Elixir D'Or is bottled opulence — a fragrance that announces you before you speak.\n\nHand-poured in small batches, sealed in a gilded flacon worthy of your vanity.",
-                "category": "Haute Parfumerie", "price": 280, "wholesale_price": 65,
-                "seo_tags": ["luxury perfume", "oud fragrance", "gold perfume", "niche parfum", "signature scent", "elixir d'or", "premium fragrance", "unisex perfume"],
-                "selling_points": ["Rare oud & golden saffron", "12-hour longevity", "Hand-poured small batches", "Gilded collectible flacon"],
-                "image_url": "https://images.pexels.com/photos/29986521/pexels-photo-29986521.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-                "source_link": "", "status": "published", "created_at": now_iso(),
-            },
-            {
-                "id": str(uuid.uuid4()), "title": "Kintsugi Gold Leather Clutch",
-                "description": "Inspired by the Japanese art of golden repair, this clutch traces veins of gold across midnight-black full-grain leather.\n\nA wearable sculpture — equal parts evening armour and objet d'art.",
-                "category": "Leather Goods", "price": 450, "wholesale_price": 120,
-                "seo_tags": ["luxury clutch", "gold leather bag", "evening clutch", "kintsugi bag", "designer handbag", "black gold purse", "statement clutch", "luxury gift"],
-                "selling_points": ["Full-grain Italian leather", "Hand-painted gold veining", "Suede interior & gold hardware", "Detachable gold chain strap"],
-                "image_url": "https://images.unsplash.com/photo-1779878603885-f211807da45e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwyfHxsdXh1cnklMjBsZWF0aGVyJTIwaGFuZGJhZyUyMGRhcmslMjBiYWNrZ3JvdW5kJTIwZ29sZCUyMGFjY2VudHxlbnwwfHx8fDE3ODYwODI1OTl8MA&ixlib=rb-4.1.0&q=85",
-                "source_link": "", "status": "published", "created_at": now_iso(),
-            },
-        ]
-        await db.products.insert_many(products)
-        logger.info("Seeded catalog products")
-
     if await db.banners.count_documents({}) == 0:
         await db.banners.insert_one({
             "id": str(uuid.uuid4()), "type": "image",
