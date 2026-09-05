@@ -21,9 +21,11 @@ export default function Storefront() {
     };
     refresh();
     const unsubscribe = subscribeToProducts(refresh);
+    const refreshTimer = setInterval(refresh, 5000);
     window.addEventListener("focus", refresh);
     return () => {
       unsubscribe();
+      clearInterval(refreshTimer);
       window.removeEventListener("focus", refresh);
     };
   }, []);
